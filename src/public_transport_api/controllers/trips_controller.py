@@ -1,73 +1,46 @@
-from flask import Blueprint, jsonify
 
-# Adjust import path based on your project structure
-from public_transport_api.services.trips_service import get_trip_details
+from flask import Blueprint, jsonify, request, current_app
+from datetime import datetime, timezone
+import sqlite3
+
+# Ważne: nazwa modułu musi się zgadzać z plikiem (trips_service.py vs trips_services.py)
+from ..services.trips_service import get_trip_details
 
 trips_bp = Blueprint('trips', __name__, url_prefix='/public_transport/city/<string:city>/trip')
 
 @trips_bp.route("/<string:trip_id>", methods=["GET"])
-def handle_trip_details(city, trip_id):
-    """
-    Retrieves details about a specific trip, including its route, headsign, and stop details.
+def handle_trip_details(city: str, trip_id: str):
+    try:
+        supported = current_app.config.get("SUPPORTED_CITIES", {"wroclaw"})
+        if city.lower() not in supported:
+            return jsonify({"error": "City not supported"}), 404
 
-    Endpoint:
-        GET /public_transport/city/<city>/trip/<trip_id>
+        if not trip_id:
+            return jsonify({"error": "Invalid trip_id"}), 400
 
-    Parameters:
-        Path Parameters:
-        - city (str): Specifies the city for which trip details are requested. Currently, only "wroclaw" is supported.
-        - trip_id (str): The unique identifier of the trip whose details need to be retrieved.
+        # Przekaż ścieżkę do DB z konfiguracji aplikacji (nie twardo kodowane 'trips.sqlite')
+        db_path = current_app.config.get("DB_PATH", "trips.sqlite")
+        date_utc = datetime.now(timezone.utc)
 
-    Returns:
-        JSON response containing:
-        - metadata: Information about the request, including the URL and query parameters.
-        - trip_details: Details of the trip, including trip_id, route_id, trip_headsign, and a list of stops with their names, coordinates, arrival times, and departure times.
+        details = get_trip_details(trip_id=trip_id, db_path=db_path, date_utc=date_utc)
+        if details is None:
+            return jsonify({"error": "Trip not found"}), 404
 
-    Errors:
-        - 400 Bad Request: If the city is not "wroclaw".
-        - 404 Not Found: If the trip with the specified trip_id is not found.
+        qs = request.query_string.decode("utf-8") if request.query_string else ""
+        self_path = request.path + (("?" + qs) if qs else "")
 
-    Example Response:
-    {
-        "metadata": {
-            "self": "/public_transport/city/wroclaw/trip/3_14613060",
-            "city": "wroclaw",
-            "trip_id": "3_14613060"
-        },
-        "trip_details": {
-            "trip_id": "3_14613060",
-            "route_id": "A",
-            "trip_headsign": "KRZYKI",
-            "stops": [
-                {
-                    "name": "Plac Grunwaldzki",
-                    "coordinates": {
-                        "latitude": 51.1092,
-                        "longitude": 17.0415
-                    },
-                    "arrival_time": "2025-04-02T08:34:00Z",
-                    "departure_time": "2025-04-02T08:35:00Z"
-                },
-                {
-                    "name": "Renoma",
-                    "coordinates": {
-                        "latitude": 51.1040,
-                        "longitude": 17.0280
-                    },
-                    "arrival_time": "2025-04-02T08:39:00Z",
-                    "departure_time": "2025-04-02T08:40:00Z"
-                },
-                {
-                    "name": "Dominikański",
-                    "coordinates": {
-                        "latitude": 51.1099,
-                        "longitude": 17.0335
-                    },
-                    "arrival_time": "2025-04-02T08:44:00Z",
-                    "departure_time": "2025-04-02T08:45:00Z"
-                }
-            ]
-        }
-    """
-    # TODO handle the city and the metadata. Add also error handling (i.e.: 404)
-    return jsonify(get_trip_details(trip_id))
+        return jsonify({
+            "metadata": {
+                "self": self_path,
+                "city": city.lower(),
+                "trip_id": trip_id
+            },
+            "trip_details": details
+        }), 200
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except sqlite3.Error as se:
+        return jsonify({"error": f"Database error: {str(se)}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
