@@ -1,6 +1,5 @@
 import sqlite3
 
-
 def get_trip_details(trip_id):
     # FIXME This is a mock implementation and should be replaced with actual database queries.
     conn = sqlite3.connect('trips.sqlite')
@@ -54,3 +53,5 @@ def get_trip_details(trip_id):
         "trip_headsign": trip_headsign,
         "stops": mocked_stop_details
     }
+
+

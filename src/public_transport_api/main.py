@@ -8,6 +8,12 @@ from controllers.trips_controller import trips_bp
 
 app = Flask(__name__)
 
+
+# Konfiguracja
+app.config["DB_PATH"] = "public_transport.db"
+app.config["SUPPORTED_CITIES"] = {"wroclaw"}
+
+
 CORS(app)
 
 
