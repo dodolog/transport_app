@@ -2,11 +2,14 @@ import sqlite3
 
 from flask import Blueprint, current_app, jsonify, request
 
-from ..services.geo import parse_coords, parse_iso8601_or_now
 from ..services.departures_service import find_closest_departures
+from ..services import geo
 
 departures_bp = Blueprint('departures', __name__, url_prefix='/public_transport/city/<string:city>/closest_departures')
 
+#
+# http://localhost:5000/public_transport/city/Wroclaw/closest_departures?start_coordinates=51.11618980246768,17.034468173747534&end_coordinates=51.11247527875757,17.030530373185027&start_time=2025-12-09T14:11:00.000Z&limit=5
+#
 @departures_bp.route("/", methods=["GET"])
 def closest_departures(city: str):
     try:
@@ -26,9 +29,9 @@ def closest_departures(city: str):
         if limit is None or limit <= 0 or limit > 50:
             return jsonify({"error": "limit must be an integer in 1..50"}), 400
 
-        start_lat, start_lon = parse_coords(start_coordinates)
-        end_lat, end_lon = parse_coords(end_coordinates)
-        start_dt_utc = parse_iso8601_or_now(start_time_raw)
+        start_lat, start_lon = geo.parse_coords(start_coordinates)
+        end_lat, end_lon = geo.parse_coords(end_coordinates)
+        start_dt_utc = geo.parse_iso8601_or_now(start_time_raw)
 
         # Złożenie listy odjazdów (serwis)
         departures = find_closest_departures(

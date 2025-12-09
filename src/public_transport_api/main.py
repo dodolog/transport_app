@@ -1,29 +1,23 @@
 from flask import Flask
 from flask_cors import CORS
 
-
 import sys
 
-from public_transport_api import controllers
 from public_transport_api.controllers.trips_controller import trips_bp
 from public_transport_api.controllers.departures_controller import departures_bp
 
+
 sys.path.append("..")
 
-
-# from controllers.trips_controller import trips_bp
-# from controllers.departures_controller import
 
 app = Flask(__name__)
 
 
 # Konfiguracja
-app.config["DB_PATH"] = "public_transport.db"
+app.config["DB_PATH"] = "gtfs_database.db"
 app.config["SUPPORTED_CITIES"] = {"wroclaw"}
 
-
 CORS(app)
-
 
 app.register_blueprint(departures_bp)
 app.register_blueprint(trips_bp)
