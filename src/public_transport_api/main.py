@@ -2,9 +2,17 @@ from flask import Flask
 from flask_cors import CORS
 
 
-from controllers.departures_controller import departures_bp
-from controllers.trips_controller import trips_bp
+import sys
 
+from public_transport_api import controllers
+from public_transport_api.controllers.trips_controller import trips_bp
+from public_transport_api.controllers.departures_controller import departures_bp
+
+sys.path.append("..")
+
+
+# from controllers.trips_controller import trips_bp
+# from controllers.departures_controller import
 
 app = Flask(__name__)
 
